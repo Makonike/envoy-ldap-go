@@ -1,4 +1,4 @@
-package envoy_ldap_go
+package main
 
 import (
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/api"

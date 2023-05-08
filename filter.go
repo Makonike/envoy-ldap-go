@@ -1,7 +1,6 @@
-package envoy_ldap_go
+package main
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/api"
@@ -14,24 +13,10 @@ type filter struct {
 	config    *config
 }
 
-// parseBasicAuth parses an HTTP Basic Authentication string.
-// "Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==" returns ("Aladdin", "open sesame", true).
-func parseBasicAuth(auth string) (username, password string, ok bool) {
-	const prefix = "Basic "
-	// Case insensitive prefix match. See Issue 22736.
-	if len(auth) < len(prefix) || !strings.EqualFold(auth[:len(prefix)], prefix) {
-		return "", "", false
-	}
-	c, err := base64.StdEncoding.DecodeString(auth[len(prefix):])
-	if err != nil {
-		return "", "", false
-	}
-	cs := string(c)
-	username, password, ok = strings.Cut(cs, ":")
-	if !ok {
-		return "", "", false
-	}
-	return username, password, true
+// todo: encrypt the message
+func parseUsernameAndPassword(auth string) (username, password string, ok bool) {
+	a := strings.Split(auth, ",")
+	return a[0], a[1], true
 }
 
 // newLdapClient creates a new ldap client.
@@ -91,7 +76,7 @@ func (f *filter) verify(header api.RequestHeaderMap) (bool, string) {
 	if !ok {
 		return false, "no Authorization"
 	}
-	username, password, ok := parseBasicAuth(auth)
+	username, password, ok := parseUsernameAndPassword(auth)
 	if !ok {
 		return false, "invalid Authorization format"
 	}
