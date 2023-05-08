@@ -26,10 +26,10 @@ static_resources:
                       plugin_config:
                         "@type": type.googleapis.com/xds.type.v3.TypedStruct
                         value:
-                          host: "localhost"
+                          host: "192.168.0.101"
                           port: 3893
                           baseDN: "dc=glauth,dc=com"
-                          username: "cn=serviceuser,ou=svcaccts,dc=glauth"
+                          username: "cn=serviceuser,ou=svcaccts,dc=glauth,dc=com"
                           password: "mysecret"
                   - name: envoy.filters.http.router
                     typed_config:

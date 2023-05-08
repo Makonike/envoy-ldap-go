@@ -23,11 +23,13 @@ func parseUsernameAndPassword(auth string) (username, password string, ok bool) 
 func newLdapClient(config *config) (*ldap.Conn, error) {
 	client, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", config.host, config.port))
 	if err != nil {
+		fmt.Println("ldap dial error: ", err)
 		return nil, err
 	}
 	err = client.Bind(config.username, config.password)
 	// First bind with a read only user
 	if err != nil {
+		fmt.Println("ldap bind error: ", err)
 		return nil, err
 	}
 	return client, err
@@ -51,18 +53,21 @@ func authLdap(config *config, username, password string) (auth bool, meta string
 	}()
 	req := ldap.NewSearchRequest(config.baseDN,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf("(sAMAccountName=%s)", username),
+		fmt.Sprintf("(cn=%s)", username),
 		[]string{"dn", "cn"}, nil)
 	sr, err := client.Search(req)
 	if err != nil {
+		fmt.Println("ldap search error: ", err)
 		return
 	}
 	if len(sr.Entries) != 1 {
+		fmt.Println("ldap search error, not found: ", err)
 		return
 	}
 	userdn := sr.Entries[0].DN
 	err = client.Bind(userdn, password)
 	if err != nil {
+		fmt.Println("ldap bind error: ", err)
 		return
 	}
 	m, _ := json.Marshal(sr.Entries[0])
@@ -82,7 +87,9 @@ func (f *filter) verify(header api.RequestHeaderMap) (bool, string) {
 	}
 	fmt.Printf("got username: %v, password: %v\n", username, password)
 
-	if ok, _ := authLdap(f.config, username, password); !ok {
+	ok, meta := authLdap(f.config, username, password)
+	fmt.Println("meta: ", meta)
+	if !ok {
 		return false, "invalid username or password"
 	}
 	return true, ""
