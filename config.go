@@ -1,0 +1,1 @@
+package envoy_ldap_go
