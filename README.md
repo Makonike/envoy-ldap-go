@@ -1,0 +1,1 @@
+# envoy-ldap-go
