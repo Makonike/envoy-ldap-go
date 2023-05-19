@@ -16,6 +16,9 @@ type filter struct {
 // todo: encrypt the message
 func parseUsernameAndPassword(auth string) (username, password string, ok bool) {
 	a := strings.Split(auth, ",")
+	if len(a) != 2 {
+		return "", "", false
+	}
 	return a[0], a[1], true
 }
 
@@ -26,6 +29,7 @@ func newLdapClient(config *config) (*ldap.Conn, error) {
 		fmt.Println("ldap dial error: ", err)
 		return nil, err
 	}
+
 	err = client.Bind(config.username, config.password)
 	// First bind with a read only user
 	if err != nil {
@@ -51,10 +55,12 @@ func authLdap(config *config, username, password string) (auth bool, meta string
 			return
 		}
 	}()
+
 	req := ldap.NewSearchRequest(config.baseDN,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		fmt.Sprintf("(cn=%s)", username),
 		[]string{"dn", "cn"}, nil)
+
 	sr, err := client.Search(req)
 	if err != nil {
 		fmt.Println("ldap search error: ", err)
@@ -64,12 +70,14 @@ func authLdap(config *config, username, password string) (auth bool, meta string
 		fmt.Println("ldap search error, not found: ", err)
 		return
 	}
+
 	userdn := sr.Entries[0].DN
 	err = client.Bind(userdn, password)
 	if err != nil {
 		fmt.Println("ldap bind error: ", err)
 		return
 	}
+
 	m, _ := json.Marshal(sr.Entries[0])
 	auth = true
 	meta = string(m)
