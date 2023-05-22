@@ -15,11 +15,11 @@ type filter struct {
 
 // todo: encrypt the message
 func parseUsernameAndPassword(auth string) (username, password string, ok bool) {
-	a := strings.Split(auth, ",")
-	if len(a) != 2 {
+	raw := strings.Split(auth, " ")
+	if len(raw) != 2 {
 		return "", "", false
 	}
-	return a[0], a[1], true
+	return raw[0], raw[1], true
 }
 
 // newLdapClient creates a new ldap client.
@@ -30,10 +30,10 @@ func newLdapClient(config *config) (*ldap.Conn, error) {
 		return nil, err
 	}
 
-	err = client.Bind(config.username, config.password)
+	err = client.Bind(config.bindDN, config.password)
 	// First bind with a read only user
 	if err != nil {
-		fmt.Println("ldap bind error: ", err)
+		fmt.Println("new ldap client, ldap bind error: ", err)
 		return nil, err
 	}
 	return client, err
@@ -43,6 +43,7 @@ func newLdapClient(config *config) (*ldap.Conn, error) {
 func authLdap(config *config, username, password string) (auth bool, meta string) {
 	client, err := newLdapClient(config)
 	if err != nil {
+		fmt.Println("ldap dial error: ", err)
 		return
 	}
 	defer func() {
@@ -55,11 +56,10 @@ func authLdap(config *config, username, password string) (auth bool, meta string
 			return
 		}
 	}()
-
 	req := ldap.NewSearchRequest(config.baseDN,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf("(cn=%s)", username),
-		[]string{"dn", "cn"}, nil)
+		fmt.Sprintf(config.filter, username),
+		[]string{config.attribute}, nil)
 
 	sr, err := client.Search(req)
 	if err != nil {

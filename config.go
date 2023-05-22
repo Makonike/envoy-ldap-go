@@ -1,11 +1,11 @@
 package main
 
 import (
+	"fmt"
+	xds "github.com/cncf/xds/go/xds/type/v3"
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/api"
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
 	"google.golang.org/protobuf/types/known/anypb"
-
-	xds "github.com/cncf/xds/go/xds/type/v3"
 )
 
 func init() {
@@ -14,11 +14,14 @@ func init() {
 }
 
 type config struct {
-	baseDN   string
-	host     string
-	port     uint64
-	username string
-	password string
+	baseDN               string
+	host                 string
+	port                 uint64
+	bindDN               string
+	password             string
+	attribute            string
+	certificateAuthority string
+	filter               string
 }
 
 type parser struct {
@@ -32,7 +35,7 @@ func (p *parser) Parse(any *anypb.Any) (interface{}, error) {
 
 	v := configStruct.Value
 	conf := &config{}
-	if baseDN, ok := v.AsMap()["baseDN"].(string); ok {
+	if baseDN, ok := v.AsMap()["base_dn"].(string); ok {
 		conf.baseDN = baseDN
 	}
 	if host, ok := v.AsMap()["host"].(string); ok {
@@ -41,12 +44,22 @@ func (p *parser) Parse(any *anypb.Any) (interface{}, error) {
 	if port, ok := v.AsMap()["port"].(float64); ok {
 		conf.port = uint64(port)
 	}
-	if username, ok := v.AsMap()["username"].(string); ok {
-		conf.username = username
+	if attribute, ok := v.AsMap()["attribute"].(string); ok {
+		conf.attribute = attribute
 	}
-	if password, ok := v.AsMap()["password"].(string); ok {
+	if bindDN, ok := v.AsMap()["bind_dn"].(string); ok {
+		conf.bindDN = bindDN
+	}
+	if password, ok := v.AsMap()["bind_password"].(string); ok {
 		conf.password = password
 	}
+	if certificateAuthority, ok := v.AsMap()["certificateAuthority"].(string); ok {
+		conf.certificateAuthority = certificateAuthority
+	}
+	if cFilter, ok := v.AsMap()["filter"].(string); ok {
+		conf.filter = cFilter
+	}
+	fmt.Println(conf)
 	return conf, nil
 }
 
