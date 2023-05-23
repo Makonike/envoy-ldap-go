@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/api"
@@ -13,13 +14,21 @@ type filter struct {
 	config    *config
 }
 
-// todo: encrypt the message
 func parseUsernameAndPassword(auth string) (username, password string, ok bool) {
-	raw := strings.Split(auth, " ")
-	if len(raw) != 2 {
+	const prefix = "Basic "
+	if len(auth) < len(prefix) || !strings.EqualFold(auth[:len(prefix)], prefix) {
 		return "", "", false
 	}
-	return raw[0], raw[1], true
+	c, err := base64.StdEncoding.DecodeString(auth[len(prefix):])
+	if err != nil {
+		return "", "", false
+	}
+	cs := string(c)
+	username, password, ok = strings.Cut(cs, ":")
+	if !ok {
+		return "", "", false
+	}
+	return username, password, true
 }
 
 // newLdapClient creates a new ldap client.
@@ -56,6 +65,7 @@ func authLdap(config *config, username, password string) (auth bool, meta string
 			return
 		}
 	}()
+
 	req := ldap.NewSearchRequest(config.baseDN,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		fmt.Sprintf(config.filter, username),
@@ -93,8 +103,6 @@ func (f *filter) verify(header api.RequestHeaderMap) (bool, string) {
 	if !ok {
 		return false, "invalid Authorization format"
 	}
-	fmt.Printf("got username: %v, password: %v\n", username, password)
-
 	ok, meta := authLdap(f.config, username, password)
 	fmt.Println("meta: ", meta)
 	if !ok {
