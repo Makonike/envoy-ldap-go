@@ -14,14 +14,13 @@ func init() {
 }
 
 type config struct {
-	baseDN               string
-	host                 string
-	port                 uint64
-	bindDN               string
-	password             string
-	attribute            string
-	certificateAuthority string
-	filter               string
+	baseDN    string
+	host      string
+	port      uint64
+	bindDN    string
+	password  string
+	attribute string
+	filter    string
 }
 
 type parser struct {
@@ -52,9 +51,6 @@ func (p *parser) Parse(any *anypb.Any) (interface{}, error) {
 	}
 	if password, ok := v.AsMap()["bind_password"].(string); ok {
 		conf.password = password
-	}
-	if certificateAuthority, ok := v.AsMap()["certificateAuthority"].(string); ok {
-		conf.certificateAuthority = certificateAuthority
 	}
 	if cFilter, ok := v.AsMap()["filter"].(string); ok {
 		conf.filter = cFilter

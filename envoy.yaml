@@ -35,7 +35,6 @@ static_resources:
                           bind_password: mysecret
                           # if filter be set, will open search mode
                           filter: (cn=%s)
-                          certificateAuthority:
 
                   - name: envoy.filters.http.router
                     typed_config:
