@@ -2,7 +2,7 @@
 
 ## Start
 
-Download glau64, and change its sample config file. 
+Download [glauth](https://github.com/glauth/glauth/releases), and change its [sample config file](https://github.com/glauth/glauth/blob/master/v2/sample-simple.cfg). 
 
 sample.yaml
 
