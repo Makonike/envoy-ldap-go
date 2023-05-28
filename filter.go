@@ -35,6 +35,7 @@ func parseUsernameAndPassword(auth string) (username, password string, ok bool) 
 
 func dial(config *config) (*ldap.Conn, error) {
 	return ldap.DialURL(
+		// TODO: support TLS
 		fmt.Sprintf("ldap://%s:%d", config.host, config.port),
 		ldap.DialWithDialer(&net.Dialer{
 			Timeout: time.Duration(config.timeout),

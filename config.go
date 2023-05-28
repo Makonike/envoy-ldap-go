@@ -75,6 +75,9 @@ func (p *parser) Parse(any *anypb.Any) (interface{}, error) {
 	if timeout, ok := v.AsMap()["timeout"].(int32); ok {
 		conf.timeout = timeout
 	}
+	if conf.timeout == 0 {
+		conf.timeout = 60000
+	}
 	return conf, nil
 }
 

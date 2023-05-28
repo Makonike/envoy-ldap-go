@@ -32,18 +32,18 @@ http_filters:
         "@type": type.googleapis.com/xds.type.v3.TypedStruct
         value:
           # required
-          host: 192.168.64.1
-          port: 3893
-          base_dn: dc=glauth,dc=com
+          host: localhost
+          port: 389
+          base_dn: dc=example,dc=com
           attribute: cn
           # optional
           # used in search mode
-          bind_dn: cn=serviceuser,ou=svcaccts,dc=glauth,dc=com
-          bind_password: mysecret
+          bind_dn: 
+          bind_password: 
           # if filter be set, will run with search mode
-          filter: (cn=%s)
+          filter: 
           cache_ttl: 0
-          timeout: 10000
+          timeout: 60000
 ```
 
 Then, you can start your filter.
@@ -62,11 +62,40 @@ This is a test case base on glauth. You can use it to test your filter.
 
 Firstly, download [glauth](https://github.com/glauth/glauth/releases), and change its [sample config file](https://github.com/glauth/glauth/blob/master/v2/sample-simple.cfg).
 
+sample.yaml
+
 ```yaml
 [ldap]
   enabled = true
   # run on a non privileged port
   listen = "192.168.64.1:3893" # 192.168.64.1 is your local network IP. Please synchronize it with the envoy.yaml file.
+```
+
+envoy.yaml
+```yaml
+http_filters:
+  - name: envoy.filters.http.golang
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+      library_id: example
+      library_path: /etc/envoy/libgolang.so
+      plugin_name: ldap-auth
+      plugin_config:
+        "@type": type.googleapis.com/xds.type.v3.TypedStruct
+        value:
+          # required
+          host: 192.168.64.1
+          port: 3893
+          base_dn: dc=glauth,dc=com
+          attribute: cn
+          # optional
+          # used in search mode
+          bind_dn: cn=serviceuser,ou=svcaccts,dc=glauth,dc=com
+          bind_password: mysecret
+          # if filter be set, will run with search mode
+          filter: (cn=%s)
+          cache_ttl: 0
+          timeout: 60000
 ```
 
 Then, start it.
