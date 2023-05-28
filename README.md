@@ -4,6 +4,8 @@ Leveraging Envoy Go extension technology, we aim to integrate LDAP-based access 
 
 During this process, we can optimize the system by implementing user information caching with a duration defined by `config.cache_ttl`. This approach will help reduce the frequency of LDAP server access. If it is set to 0, caching is disabled by default.
 
+In terms of caching, we utilize [bigcache](https://github.com/allegro/bigcache), which demonstrates exceptional performance in the evicting cache domain.
+
 ## Usage
 
 The client set credentials in `Authorization` header in the following format:
@@ -37,10 +39,10 @@ http_filters:
           base_dn: dc=example,dc=com
           attribute: cn
           # optional
-          # used in search mode
+          # be used in search mode
           bind_dn: 
           bind_password: 
-          # if filter be set, will run with search mode
+          # if the filter is set, the filter application will run in search mode.
           filter: 
           cache_ttl: 0
           timeout: 60000
@@ -58,7 +60,7 @@ make run
 
 ## Test
 
-This is a test case base on glauth. You can use it to test your filter.
+This test case is based on glauth and can be utilized to evaluate your filter.
 
 Firstly, download [glauth](https://github.com/glauth/glauth/releases), and change its [sample config file](https://github.com/glauth/glauth/blob/master/v2/sample-simple.cfg).
 
@@ -68,7 +70,7 @@ sample.yaml
 [ldap]
   enabled = true
   # run on a non privileged port
-  listen = "192.168.64.1:3893" # 192.168.64.1 is your local network IP. Please synchronize it with the envoy.yaml file.
+  listen = "192.168.64.1:3893" # 192.168.64.1 is your local network IP. Please synchronize it with envoy.yaml.
 ```
 
 envoy.yaml
@@ -89,10 +91,10 @@ http_filters:
           base_dn: dc=glauth,dc=com
           attribute: cn
           # optional
-          # used in search mode
+          # be used in search mode
           bind_dn: cn=serviceuser,ou=svcaccts,dc=glauth,dc=com
           bind_password: mysecret
-          # if filter be set, will run with search mode
+          # if the filter is set, the filter application will run in search mode.
           filter: (cn=%s)
           cache_ttl: 0
           timeout: 60000
@@ -104,13 +106,14 @@ Then, start it.
 ./glauth -c sample.yaml
 ```
 
-If you start your filter, you can run this command to test it.
+Once you have activated the filter, you can execute the following command to test it.
 
 ```bash
 make test
 ```
 
-output.
+The following are the output results.
+
 ```bash
 $ make test
 curl -s -I 'http://localhost:10000/'

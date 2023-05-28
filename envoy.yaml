@@ -32,10 +32,10 @@ static_resources:
                           base_dn: dc=example.com,dc=com
                           attribute: cn
                           # optional
-                          # used in search mode
+                          # be used in search mode
                           bind_dn:
                           bind_password:
-                          # if filter be set, will run with search mode
+                          # if the filter is set, the filter application will run in search mode.
                           filter:
                           cache_ttl: 0
                           timeout: 60000
