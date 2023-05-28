@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	xds "github.com/cncf/xds/go/xds/type/v3"
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/api"
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
@@ -14,13 +13,15 @@ func init() {
 }
 
 type config struct {
-	baseDN    string
 	host      string
 	port      uint64
+	baseDN    string
+	attribute string
 	bindDN    string
 	password  string
-	attribute string
 	filter    string
+	cacheTTL  int32
+	timeout   int32
 }
 
 type parser struct {
@@ -34,14 +35,14 @@ func (p *parser) Parse(any *anypb.Any) (interface{}, error) {
 
 	v := configStruct.Value
 	conf := &config{}
-	if baseDN, ok := v.AsMap()["base_dn"].(string); ok {
-		conf.baseDN = baseDN
-	}
 	if host, ok := v.AsMap()["host"].(string); ok {
 		conf.host = host
 	}
 	if port, ok := v.AsMap()["port"].(float64); ok {
 		conf.port = uint64(port)
+	}
+	if baseDN, ok := v.AsMap()["base_dn"].(string); ok {
+		conf.baseDN = baseDN
 	}
 	if attribute, ok := v.AsMap()["attribute"].(string); ok {
 		conf.attribute = attribute
@@ -55,7 +56,16 @@ func (p *parser) Parse(any *anypb.Any) (interface{}, error) {
 	if cFilter, ok := v.AsMap()["filter"].(string); ok {
 		conf.filter = cFilter
 	}
-	fmt.Println(conf)
+	if cacheTTL, ok := v.AsMap()["cache_ttl"].(int32); ok {
+		conf.cacheTTL = cacheTTL
+	}
+	// default is -1, which means no cache
+	if conf.cacheTTL == 0 {
+		conf.cacheTTL = -1
+	}
+	if timeout, ok := v.AsMap()["timeout"].(int32); ok {
+		conf.timeout = timeout
+	}
 	return conf, nil
 }
 

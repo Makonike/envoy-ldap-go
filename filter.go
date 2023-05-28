@@ -49,7 +49,25 @@ func newLdapClient(config *config) (*ldap.Conn, error) {
 }
 
 // authLdap authenticates the user against the ldap server.
-func authLdap(config *config, username, password string) (auth bool, meta string) {
+func authLdap(config *config, username, password string) bool {
+	if config.filter != "" {
+		fmt.Printf("search mode, username: %v\n", username)
+		return searchMode(config, username, password)
+	}
+	fmt.Printf("bind mode, username: %v\n", username)
+	client, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", config.host, config.port))
+	if err != nil {
+		fmt.Println("ldap dial error: ", err)
+		return false
+	}
+	_, err = client.SimpleBind(&ldap.SimpleBindRequest{
+		Username: fmt.Sprintf(config.attribute+"=%s,%s", username, config.baseDN),
+		Password: password,
+	})
+	return err != nil
+}
+
+func searchMode(config *config, username, password string) (auth bool) {
 	client, err := newLdapClient(config)
 	if err != nil {
 		fmt.Println("ldap dial error: ", err)
@@ -88,9 +106,12 @@ func authLdap(config *config, username, password string) (auth bool, meta string
 		return
 	}
 
-	m, _ := json.Marshal(sr.Entries[0])
+	_, err = json.Marshal(sr.Entries[0])
+	if err != nil {
+		fmt.Println("ldap marshal error: ", err)
+		return
+	}
 	auth = true
-	meta = string(m)
 	return
 }
 
@@ -103,8 +124,7 @@ func (f *filter) verify(header api.RequestHeaderMap) (bool, string) {
 	if !ok {
 		return false, "invalid Authorization format"
 	}
-	ok, meta := authLdap(f.config, username, password)
-	fmt.Println("meta: ", meta)
+	ok = authLdap(f.config, username, password)
 	if !ok {
 		return false, "invalid username or password"
 	}
