@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/api"
 	"github.com/go-ldap/ldap/v3"
+	"net"
 	"strings"
+	"time"
 )
 
 type filter struct {
@@ -31,9 +33,18 @@ func parseUsernameAndPassword(auth string) (username, password string, ok bool) 
 	return username, password, true
 }
 
+func dial(config *config) (*ldap.Conn, error) {
+	return ldap.DialURL(
+		fmt.Sprintf("ldap://%s:%d", config.host, config.port),
+		ldap.DialWithDialer(&net.Dialer{
+			Timeout: time.Duration(config.timeout),
+		}),
+	)
+}
+
 // newLdapClient creates a new ldap client.
 func newLdapClient(config *config) (*ldap.Conn, error) {
-	client, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", config.host, config.port))
+	client, err := dial(config)
 	if err != nil {
 		fmt.Println("ldap dial error: ", err)
 		return nil, err
@@ -42,7 +53,7 @@ func newLdapClient(config *config) (*ldap.Conn, error) {
 	err = client.Bind(config.bindDN, config.password)
 	// First bind with a read only user
 	if err != nil {
-		fmt.Println("new ldap client, ldap bind error: ", err)
+		fmt.Println("bind with read only user error: ", err)
 		return nil, err
 	}
 	return client, err
@@ -54,17 +65,20 @@ func authLdap(config *config, username, password string) bool {
 		fmt.Printf("search mode, username: %v\n", username)
 		return searchMode(config, username, password)
 	}
+
+	// run with bind mode
 	fmt.Printf("bind mode, username: %v\n", username)
-	client, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", config.host, config.port))
+	client, err := dial(config)
 	if err != nil {
 		fmt.Println("ldap dial error: ", err)
 		return false
 	}
+
 	_, err = client.SimpleBind(&ldap.SimpleBindRequest{
 		Username: fmt.Sprintf(config.attribute+"=%s,%s", username, config.baseDN),
 		Password: password,
 	})
-	return err != nil
+	return err == nil
 }
 
 func searchMode(config *config, username, password string) (auth bool) {
@@ -94,13 +108,14 @@ func searchMode(config *config, username, password string) (auth bool) {
 		fmt.Println("ldap search error: ", err)
 		return
 	}
+
 	if len(sr.Entries) != 1 {
-		fmt.Println("ldap search error, not found: ", err)
+		fmt.Println("ldap search not found: ", err)
 		return
 	}
 
-	userdn := sr.Entries[0].DN
-	err = client.Bind(userdn, password)
+	userDn := sr.Entries[0].DN
+	err = client.Bind(userDn, password)
 	if err != nil {
 		fmt.Println("ldap bind error: ", err)
 		return
@@ -120,6 +135,13 @@ func (f *filter) verify(header api.RequestHeaderMap) (bool, string) {
 	if !ok {
 		return false, "no Authorization"
 	}
+	if f.config.cacheTTL > 0 {
+		if _, err := f.config.cache.Get(auth); err == nil {
+			fmt.Printf("cache hit, auth: %v\n", auth)
+			return true, ""
+		}
+	}
+
 	username, password, ok := parseUsernameAndPassword(auth)
 	if !ok {
 		return false, "invalid Authorization format"
@@ -127,6 +149,10 @@ func (f *filter) verify(header api.RequestHeaderMap) (bool, string) {
 	ok = authLdap(f.config, username, password)
 	if !ok {
 		return false, "invalid username or password"
+	}
+	if f.config.cacheTTL > 0 {
+		fmt.Printf("cache set, auth: %v\n", auth)
+		_ = f.config.cache.Set(auth, []byte{})
 	}
 	return true, ""
 }
